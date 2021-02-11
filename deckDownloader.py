@@ -47,7 +47,11 @@ def download_deck(deck,delay=1):
     ids = deck.get_ids()
     
     for id in ids:
-        card = yugioh.get_card(card_id=id)
+        try:
+            card = yugioh.get_card(card_id=id)
+        except:
+            print("Failed to get card info for id",id)
+            continue
         if id in blacklist:
             print(card.name,"in blacklist")
             continue

@@ -82,7 +82,7 @@ class Deck:
 
 
 def get_deck_directory(alwaysLetUserChoose=False):
-    default_dirs = ["C:/ProjectIgnis/deck/","D:/ProjectIgnis/deck/","~/Games/ProjectIgnis/deck/"]
+    default_dirs = ["C:/ProjectIgnis/deck/","D:/ProjectIgnis/deck/","/home/timo/Games/ProjectIgnis/deck/"]
     if alwaysLetUserChoose:
         default_dirs = []
     for d in default_dirs:

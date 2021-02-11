@@ -127,7 +127,10 @@ def main():
 
     edopro_pics_dir = os.path.join(os.path.join(deckDir,os.path.pardir),"pics")
     if os.path.isdir(edopro_pics_dir):
-        os.startfile(edopro_pics_dir)
+        try:
+            os.startfile(edopro_pics_dir)
+        except AttributeError:
+            pass
 
     
 

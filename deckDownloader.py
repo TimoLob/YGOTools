@@ -104,12 +104,8 @@ def main():
     deck_paths = list(glob.glob(deckDir+"*.ydk"))
     decks = [Deck(x) for x in deck_paths]
 
-
-
     for index,deck in enumerate(decks):
         print(index,"-",deck.name)
-
-
 
     decksToDownload = input("Please enter the deck ids you want to download(separatet by comma)\n").split(",")
     decksToDownload = [int(x.strip()) for x in decksToDownload]
@@ -123,10 +119,12 @@ def main():
         print("--- Downloading",deck,"---")
         download_deck(deck)
     print("-------Done----------")
+    input()
 
     edopro_pics_dir = os.path.join(os.path.join(deckDir,os.path.pardir),"pics")
     if os.path.isdir(edopro_pics_dir):
         os.startfile(edopro_pics_dir)
+
     
 
 if __name__=="__main__":

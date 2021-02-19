@@ -7,6 +7,17 @@ import glob
 import tkinter as tk
 from tkinter import filedialog
 
+verbose = False
+
+def log(*args):
+    if verbose:
+        print(*args)
+
+def update_progress(progress):
+    progress = int(progress*100)
+    print("\r [{0}] {1}%".format('#'*int(progress/10), progress),end="")
+
+
 def load_blacklist():
     if not os.path.isfile("./blacklist.txt"):
         return set()
@@ -34,33 +45,39 @@ def download_image(url,filename):
     return True
 
 def download_card(card):
-    outPath = "./pics/"+str(card.id)+".jpg"
-    imgUrl = "https://ygoprodeck.com/pics/"+str(card.id)+".jpg"
-    if not download_image(imgUrl,outPath):
+    out_path = "./pics/"+str(card.id)+".jpg"
+    img_url = "https://ygoprodeck.com/pics/"+str(card.id)+".jpg"
+    if not download_image(img_url,out_path):
         print("Failed to Download "+card.name)
         return False
     return True
 
 
-def download_deck(deck,delay=1):
+def download_set(ids,delay=1):
     blacklist = load_blacklist()
-    ids = deck.get_ids()
-    
-    for id in ids:
+    failed_ids = set()
+    skipped = set()
+    for index,id in enumerate(ids):
+        update_progress(index/len(ids))
         try:
             card = yugioh.get_card(card_id=id)
-        except:
-            print("Failed to get card info for id",id)
+        except KeyError:
+            log("Failed to get card info for id",id)
+            failed_ids.add(id)
             continue
         if id in blacklist:
-            print(card.name,"in blacklist")
+            log(card.name,"already downloaded")
+            skipped.add(id)
             continue
         if download_card(card):
             blacklist.add(id)
-            print("Downloaded",card.name)
+            log("Downloaded",card.name)
+        else:
+            failed_ids.add(id)
             
         time.sleep(delay)
         write_blacklist(blacklist)
+    return {"failed" : failed_ids,"downloaded":ids.difference(failed_ids).difference(skipped),"skipped":skipped}
 
 
 class Deck:
@@ -85,9 +102,9 @@ class Deck:
         return "Deck "+self.name
 
 
-def get_deck_directory(alwaysLetUserChoose=False):
+def get_deck_directory(let_user_choose=False):
     default_dirs = ["C:/ProjectIgnis/deck/","D:/ProjectIgnis/deck/","/home/timo/Games/ProjectIgnis/deck/"]
-    if alwaysLetUserChoose:
+    if let_user_choose:
         default_dirs = []
     for d in default_dirs:
         if len(list(glob.glob(d+"*.ydk"))) > 0:
@@ -102,31 +119,46 @@ def get_deck_directory(alwaysLetUserChoose=False):
 
 
 def main():
+    deck_dir = get_deck_directory()
     
-    deckDir = get_deck_directory()
-    
-    deck_paths = list(glob.glob(deckDir+"*.ydk"))
+    deck_paths = list(glob.glob(deck_dir+"*.ydk"))
     decks = [Deck(x) for x in deck_paths]
 
     for index,deck in enumerate(decks):
         print(index,"-",deck.name)
 
-    decksToDownload = input("Please enter the deck ids you want to download(separatet by comma)\n").split(",")
-    decksToDownload = [int(x.strip()) for x in decksToDownload]
+    decks_to_download = input("Please enter the deck ids you want to download(separatet by comma)\n").split(",")
+    decks_to_download = [int(x.strip()) for x in decks_to_download]
 
 
     if not os.path.isdir("./pics"):
         os.mkdir("./pics")
 
-    for index in decksToDownload:
+    ids_to_download = set()
+    for index in decks_to_download:
+        if(index>len(decks) or index < 0):
+            print("Invalid Index:",index)
+            return
+        print("Collecting",deck)
         deck = decks[index]
-        print("--- Downloading",deck,"---")
-        download_deck(deck)
-    print("-------Done----------")
+        ids_to_download = ids_to_download.union(deck.get_ids())
+    print("Downloading",len(ids_to_download),"cards...")
+    result = download_set(ids_to_download)
+    update_progress(1)
+    failed = result["failed"]
+    print("\n-------Done----------\n")
+
+    print("Downloaded",len(result["downloaded"]),"cards.")
+    print("Skipped",len(result["skipped"]),"cards.")
+    if len(failed)>0:
+        for id in failed:
+            print("Failed to download id",id)
+
+    
     input()
 
-    edopro_pics_dir = os.path.join(os.path.join(deckDir,os.path.pardir),"pics")
-    if os.path.isdir(edopro_pics_dir):
+    edopro_pics_dir = os.path.join(os.path.join(deck_dir,os.path.pardir),"pics")
+    if len(result["downloaded"])>0 and os.path.isdir(edopro_pics_dir):
         try:
             os.startfile(edopro_pics_dir)
         except AttributeError:

@@ -1,0 +1,7 @@
+OldVersion/
+blacklist.txt
+pics/
+build/
+__pycache__/
+dist/
+deckDownloader.spec

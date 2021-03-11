@@ -133,14 +133,16 @@ def main():
 
     if not os.path.isdir("./pics"):
         os.mkdir("./pics")
+    print(decks_to_download)
 
     ids_to_download = set()
     for index in decks_to_download:
         if(index>len(decks) or index < 0):
             print("Invalid Index:",index)
             return
-        print("Collecting",deck)
         deck = decks[index]
+        print("Collecting",deck)
+
         ids_to_download = ids_to_download.union(deck.get_ids())
     print("Downloading",len(ids_to_download),"cards...")
     result = download_set(ids_to_download)

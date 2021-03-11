@@ -1,7 +1,7 @@
 A collection of tools for use with EDOPro.
 
 ## CardDownloader
-Can download higher resolution card images. Makes EDOPro look a lot better especially in fullscreen.
+Can download higher resolution card images. Makes EDOPro look a lot better, especially in fullscreen.
 To avoid downloading all cards, you can only download card images for the decks you play.
 
 

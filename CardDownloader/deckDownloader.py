@@ -133,7 +133,6 @@ def main():
 
     if not os.path.isdir("./pics"):
         os.mkdir("./pics")
-    print(decks_to_download)
 
     ids_to_download = set()
     for index in decks_to_download:

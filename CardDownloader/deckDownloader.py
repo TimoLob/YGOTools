@@ -127,9 +127,12 @@ def main():
     for index,deck in enumerate(decks):
         print(index,"-",deck.name)
 
-    decks_to_download = input("Please enter the deck ids you want to download(separatet by comma)\n").split(",")
-    decks_to_download = [int(x.strip()) for x in decks_to_download]
-
+    decks_to_download = input("Please enter the deck ids you want to download(separatet by comma) or '*' if you want to download all of them\n")
+    if("*" in decks_to_download):
+        decks_to_download = list(range(len(decks)))
+    else:
+        decks_to_download = decks_to_download.split(",")
+        decks_to_download = [int(x.strip()) for x in decks_to_download]
 
     if not os.path.isdir("./pics"):
         os.mkdir("./pics")

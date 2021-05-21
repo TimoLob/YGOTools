@@ -55,8 +55,14 @@ def download_card(card):
 
 def download_set(ids,delay=1):
     blacklist = load_blacklist()
+
+    print(f"Total: {len(ids)} cards.")
+    ids_on_blacklist = ids.intersection(blacklist)
+    ids = ids-ids_on_blacklist
+    print("Downloading",len(ids),"cards...")
+
+    print(f"Skipping {len(ids_on_blacklist)} cards.")
     failed_ids = set()
-    skipped = set()
     for index,id in enumerate(ids):
         update_progress(index/len(ids))
         try:
@@ -67,7 +73,6 @@ def download_set(ids,delay=1):
             continue
         if id in blacklist:
             log(card.name,"already downloaded")
-            skipped.add(id)
             continue
         if download_card(card):
             blacklist.add(id)
@@ -77,7 +82,7 @@ def download_set(ids,delay=1):
             
         time.sleep(delay)
         write_blacklist(blacklist)
-    return {"failed" : failed_ids,"downloaded":ids.difference(failed_ids).difference(skipped),"skipped":skipped}
+    return {"failed" : failed_ids,"downloaded":ids}
 
 
 class Deck:
@@ -146,14 +151,12 @@ def main():
         print("Collecting",deck)
 
         ids_to_download = ids_to_download.union(deck.get_ids())
-    print("Downloading",len(ids_to_download),"cards...")
     result = download_set(ids_to_download)
     update_progress(1)
     failed = result["failed"]
     print("\n-------Done----------\n")
 
     print("Downloaded",len(result["downloaded"]),"cards.")
-    print("Skipped",len(result["skipped"]),"cards.")
     if len(failed)>0:
         for id in failed:
             print("Failed to download id",id)

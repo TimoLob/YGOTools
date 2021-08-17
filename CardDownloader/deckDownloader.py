@@ -34,9 +34,7 @@ def write_blacklist(blacklist):
             outfile.write(id+"\n")
     
 
-
 def download_image(url,filename):
-    #print(url,filename)
     resp = requests.get(url, stream=True).raw
     img = Image.open(resp)
     if img.mode in ("RGBA", "P"): 
@@ -53,8 +51,11 @@ def download_card(card):
     return True
 
 
-def download_set(ids,delay=1):
-    blacklist = load_blacklist()
+def download_set(ids,delay=1,ignore_blacklist=False):
+    blacklist = set()
+    if not ignore_blacklist:
+        blacklist = load_blacklist()
+    
 
     print(f"Total: {len(ids)} cards.")
     ids_on_blacklist = ids.intersection(blacklist)
@@ -81,7 +82,8 @@ def download_set(ids,delay=1):
             failed_ids.add(id)
             
         time.sleep(delay)
-        write_blacklist(blacklist)
+        if not ignore_blacklist:
+            write_blacklist(blacklist)
     return {"failed" : failed_ids,"downloaded":ids}
 
 
@@ -121,8 +123,6 @@ def get_deck_directory(let_user_choose=False):
     file_path = filedialog.askdirectory(title="Select the directory that contains your decks")
     return file_path+"/"
     
-
-
 def main():
     deck_dir = get_deck_directory()
     
@@ -133,6 +133,11 @@ def main():
         print(index,"-",deck.name)
 
     decks_to_download = input("Please enter the deck ids you want to download(separatet by comma) or '*' if you want to download all of them\n")
+    ignore_blacklist = False
+    if("-f" in decks_to_download):
+        print("Ignoring Blacklist")
+        decks_to_download = decks_to_download.replace("-f","")
+        ignore_blacklist = True
     if("*" in decks_to_download):
         decks_to_download = list(range(len(decks)))
     else:
@@ -151,7 +156,7 @@ def main():
         print("Collecting",deck)
 
         ids_to_download = ids_to_download.union(deck.get_ids())
-    result = download_set(ids_to_download)
+    result = download_set(ids_to_download,ignore_blacklist=ignore_blacklist)
     update_progress(1)
     failed = result["failed"]
     print("\n-------Done----------\n")

@@ -6,86 +6,128 @@ import requests
 import glob
 import tkinter as tk
 from tkinter import filedialog
+from abc import ABC, abstractmethod
 
-verbose = False
+class Downloader(ABC):
+    def __init__(self,data_dir="./data",verbose = False) -> None:
+        self._verbose = verbose
+        self._blacklist = set()
+        self._decks = set()
+        self._card_ids = set()
+        self._data_dir = data_dir
 
-def log(*args):
-    if verbose:
-        print(*args)
+        self._path_to_blacklist = os.path.join(data_dir,"blacklist.txt")
+        self._path_to_images = os.path.join(data_dir,"pics/")
 
-def update_progress(progress):
-    progress = int(progress*100)
-    print("\r [{0}] {1}%".format('#'*int(progress/10), progress),end="")
+        if not os.path.isdir(data_dir):
+            os.mkdir(data_dir)
 
+        if not os.path.isdir(self._path_to_images):
+            os.mkdir(self._path_to_images)
 
-def load_blacklist():
-    if not os.path.isfile("./blacklist.txt"):
-        return set()
-    ids = set()
-    with open("blacklist.txt") as infile:
-        lines = infile.readlines()
-        for line in lines:
-            ids.add(line.strip())
-    return ids
-
-def write_blacklist(blacklist):
-    with open("blacklist.txt","w") as outfile:
-        for id in blacklist:
-            outfile.write(id+"\n")
+    def log(self,*args):
+        if self._verbose:
+            print(*args)
     
+    def add_deck(self,deck):
+        self.log("Added deck",deck)
+        self._decks.add(deck)
+        self._card_ids = self._card_ids.union(deck.get_ids())
 
-def download_image(url,filename):
-    resp = requests.get(url, stream=True).raw
-    img = Image.open(resp)
-    if img.mode in ("RGBA", "P"): 
-        img = img.convert("RGB")
-    img.save(filename,"JPEG")
-    return True
+    def load_blacklist(self):
+        if not os.path.isfile(self._path_to_blacklist):
+            return set()
+        with open(self._path_to_blacklist) as infile:
+            lines = infile.readlines()
+            for line in lines:
+                self._blacklist.add(line.strip())
+        return self._blacklist
 
-def download_card(card):
-    out_path = "./pics/"+str(card.id)+".jpg"
-    img_url = "https://ygoprodeck.com/pics/"+str(card.id)+".jpg"
-    if not download_image(img_url,out_path):
-        print("Failed to Download "+card.name)
-        return False
-    return True
+    def write_blacklist(self):
+        with open(self._path_to_blacklist,"w") as outfile:
+            for id in self._blacklist:
+                outfile.write(id+"\n")
+        
 
+    def download_image(self,url,filename):
+        resp = requests.get(url, stream=True).raw
+        img = Image.open(resp)
+        if img.mode in ("RGBA", "P"): 
+            img = img.convert("RGB")
+        img.save(filename,"JPEG")
+        return True
 
-def download_set(ids,delay=1,ignore_blacklist=False):
-    blacklist = set()
-    if not ignore_blacklist:
-        blacklist = load_blacklist()
-    
+    def download_card(self,card):
+        out_path = os.path.join(self._path_to_images,str(card.id)+".jpg")
+        img_url = "https://ygoprodeck.com/pics/"+str(card.id)+".jpg"
+        if not self.download_image(img_url,out_path):
+            print("Failed to Download "+card.name)
+            return False
+        return True
 
-    print(f"Total: {len(ids)} cards.")
-    ids_on_blacklist = ids.intersection(blacklist)
-    ids = ids-ids_on_blacklist
-    print("Downloading",len(ids),"cards...")
+    @abstractmethod
+    def update_progress(self,progress):
+        pass
 
-    print(f"Skipping {len(ids_on_blacklist)} cards.")
-    failed_ids = set()
-    for index,id in enumerate(ids):
-        update_progress(index/len(ids))
-        try:
-            card = yugioh.get_card(card_id=id)
-        except KeyError:
-            log("Failed to get card info for id",id)
-            failed_ids.add(id)
-            continue
-        if id in blacklist:
-            log(card.name,"already downloaded")
-            continue
-        if download_card(card):
-            blacklist.add(id)
-            log("Downloaded",card.name)
-        else:
-            failed_ids.add(id)
+    @abstractmethod
+    def onCardDownload(self,id,name=""):
+        pass
+
+    @abstractmethod
+    def onFailedDownload(self,id,name=""):
+        pass
+
+    def start_download(self,delay=1):        
+
+        ids = self._card_ids
+        print(f"Total: {len(ids)} cards.")
+        ids_on_blacklist = ids.intersection(self._blacklist)
+        ids = ids-ids_on_blacklist
+        print("Downloading",len(ids),"cards...")
+
+        print(f"Skipping {len(ids_on_blacklist)} cards.")
+        failed_ids = set()
+        for index,id in enumerate(ids):
+            self.update_progress(index/len(ids))
+            try:
+                card = yugioh.get_card(card_id=id)
+            except KeyError:
+                failed_ids.add(id)
+                self.onFailedDownload(id)
+                continue
+            if id in self._blacklist:
+                #self.log(card.name,"already downloaded")
+                continue
+            if self.download_card(card):
+                self._blacklist.add(id)
+                self.onCardDownload(id,name=card.name)
+            else:
+                failed_ids.add(id)
+                self.onFailedDownload(id,name=card.name)
             
-        time.sleep(delay)
-        if not ignore_blacklist:
-            write_blacklist(blacklist)
-    return {"failed" : failed_ids,"downloaded":ids}
+            time.sleep(delay)
+        self.update_progress(1)
+        return {"failed" : failed_ids,"downloaded":ids}
 
+
+class CLIDownloader(Downloader):
+    def __init__(self,data_dir="./data",verbose = False):
+        super(CLIDownloader,self).__init__(data_dir=data_dir,verbose=verbose)
+
+    def onCardDownload(self,id, name=""):
+        self.log("Downloaded",name)
+
+    def onFailedDownload(self, id, name=""):
+        self.log("Failed to download card with id:",id,end="")
+        if name:
+            self.log(name)
+        else:
+            self.log()
+    
+
+    def update_progress(self,progress):
+        progress = int(progress*100)
+        print("\r [{0}] {1}%".format('#'*int(progress/10), progress),end="")
 
 class Deck:
     def __init__(self,path):
@@ -133,31 +175,25 @@ def main():
         print(index,"-",deck.name)
 
     decks_to_download = input("Please enter the deck ids you want to download(separatet by comma) or '*' if you want to download all of them\n")
-    ignore_blacklist = False
-    if("-f" in decks_to_download):
-        print("Ignoring Blacklist")
-        decks_to_download = decks_to_download.replace("-f","")
-        ignore_blacklist = True
+
     if("*" in decks_to_download):
         decks_to_download = list(range(len(decks)))
     else:
         decks_to_download = decks_to_download.split(",")
         decks_to_download = [int(x.strip()) for x in decks_to_download]
 
-    if not os.path.isdir("./pics"):
-        os.mkdir("./pics")
+    downloader = CLIDownloader()
+    downloader.load_blacklist()
 
-    ids_to_download = set()
     for index in decks_to_download:
         if(index>len(decks) or index < 0):
             print("Invalid Index:",index)
             return
         deck = decks[index]
-        print("Collecting",deck)
-
-        ids_to_download = ids_to_download.union(deck.get_ids())
-    result = download_set(ids_to_download,ignore_blacklist=ignore_blacklist)
-    update_progress(1)
+        #ids_to_download = ids_to_download.union(deck.get_ids())
+        downloader.add_deck(deck)
+    result = downloader.start_download()#download_set(ids_to_download,ignore_blacklist=ignore_blacklist)
+    downloader.write_blacklist()
     failed = result["failed"]
     print("\n-------Done----------\n")
 

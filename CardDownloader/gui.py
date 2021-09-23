@@ -11,17 +11,21 @@ import threading
 
 class Select_Deck_Window:
     def __init__(self):
-        self.current_path = "D:/ProjectIgnis/deck/"
+        self.current_path = "C:/ProjectIgnis/deck/"
         
         window = self.build_window()
         self.update_directory()
+        if len(self.decks)<1:
+            self.current_path = "D:/ProjectIgnis/deck/"
+            self.update_directory()
+        
         window.mainloop()
 
     def choose_dir_callback(self):
         path = tk.filedialog.askdirectory(mustexist = True)
         if not path:
             return
-        self.current_path=path
+        self.current_path=path+"/"
         self.update_directory()
 
     def update_directory(self):
@@ -190,16 +194,19 @@ class DeckDownloaderGUI(Downloader):
 
         window.protocol("WM_DELETE_WINDOW",self.on_close)
 
-
         self.thread = threading.Thread(target=self.multithreaded_download)
         self.thread.start()
 
         window.mainloop()
 
     def on_close(self):
+        self.abort = True
+        self.thread.join(timeout = 3)
         if not self.thread.is_alive():
             self.window.destroy()
 
+    def onStartDownload(self,num_ids, num_on_blacklist):
+        self.window.title("Downloading "+str(num_ids)+ " cards.")
 
     def onCardDownload(self, id, name=""):
         self.card_name.set(name)

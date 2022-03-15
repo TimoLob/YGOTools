@@ -2,7 +2,7 @@
 
 ## How to build
 
-pip install pyinstaller
+pip install pyinstaller  
 pyinstaller --onefile  deckDownloader.py
 
 ## Usage

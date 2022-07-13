@@ -1,12 +1,4 @@
-# Downloads high Quality images from ygoprodeck.com.
-
-## How to build
-
-pip install pyinstaller  
-pyinstaller --onefile  deckDownloader.py
-
-## Usage
-
+Download HD Yugioh card images for your decks.
 This tool is intended for use with Project Ignis - EDOPro. However, it will likely work with a lot of other programs or if you just want to download a lot of card images.
 
 To use this tool just double click the executable.
@@ -19,4 +11,3 @@ Next, use the arrows to move the decks you want to download to the right side of
 If you made your selection click the "Download" button. This will open a new window with a progress bar. Just wait until the download is done and close both windows.
 
 Now you need to move the downloaded images manually to the correct location. Just navigate to the data folder. It should be right next to deckDownloader.exe. Now copy everything in the "pics" folder there to your EDOPro installation. This should be "C:/ProjectIgnis/pics/" by default.
-

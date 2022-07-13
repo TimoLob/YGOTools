@@ -3,4 +3,3 @@ Tool that Downloads the master duel banlist and converts it into a fllist that E
 
 requirements:
 BeautifulSoup
-pip install yugioh
